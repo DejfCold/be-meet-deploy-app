@@ -1,9 +1,38 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - source: src/main/resources/application-container.properties
+        target: /opt/config/application.properties
+        read_only: true
+        type: bind
+    environment:
+      SPRING_CONFIG_LOCATION: /opt/config/application.properties
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+
   postgres:
-    image: 'postgres:latest'
+    image: 'docker.io/library/postgres:17'
+    restart: always
     environment:
       - 'POSTGRES_DB=mydatabase'
       - 'POSTGRES_PASSWORD=secret'
       - 'POSTGRES_USER=myuser'
+    healthcheck:
+      test: "pg_isready"
+    volumes:
+      - source: postgres-data
+        target: /var/lib/postgresql/data
+        read_only: false
+        type: volume
     ports:
-      - "15432:5432"
+      - "127.0.0.1:15432:5432"
+volumes:
+  postgres-data:
