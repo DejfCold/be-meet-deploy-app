@@ -21,16 +21,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract commit ID
-        id: commit
-        run: echo "commit_id=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+      - name: Extract commit ID and lowercase repository name
+        id: vars
+        run: |
+          echo "commit_id=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+          echo "repository_lowercase=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest .
-          docker tag ghcr.io/${{ github.repository }}:latest ghcr.io/${{ github.repository }}:${{ env.commit_id }}
+          docker build -t ghcr.io/${{ env.repository_lowercase }}:latest .
+          docker tag ghcr.io/${{ env.repository_lowercase }}:latest ghcr.io/${{ env.repository_lowercase }}:${{ env.commit_id }}
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository }}:latest
-          docker push ghcr.io/${{ github.repository }}:${{ env.commit_id }}
+          docker push ghcr.io/${{ env.repository_lowercase }}:latest
+          docker push ghcr.io/${{ env.repository_lowercase }}:${{ env.commit_id }}
