@@ -6,6 +6,9 @@ on:
         type: string
         required: true
         description: The tag to be deployed
+env:
+  CRI: podman
+  CONFIG: ./ssh-config-files
 jobs:
   deploy-ssh:
     runs-on: ubuntu-latest
@@ -35,8 +38,8 @@ jobs:
 
       - name: Copy files
         run: |
-          rsync ${CONFIG} ${SSH_USER}:${SSH_SERVER}:${WORKDIR} --delete
+          rsync ${CONFIG} {{ .secrets.ssh_user }}:{{ .secrets.ssh_server }}:{{ .secrets.app_location }} --delete
 
       - name: Restart docker compose
         run: |
-          ssh -t ${SSH_USER}:${SSH_SERVER} "cd ${WORKDIR} && ${CRI} compose restart"
+          ssh -t {{ .secrets.ssh_user }}:{{ .secrets.ssh_server }} "cd {{ .secrets.app_location }} && ${CRI} compose restart"
