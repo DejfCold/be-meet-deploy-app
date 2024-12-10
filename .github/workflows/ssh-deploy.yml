@@ -1,0 +1,42 @@
+on:
+  deployment:
+  workflow_dispatch:
+    inputs:
+      deploy-tag:
+        type: string
+        required: true
+        description: The tag to be deployed
+jobs:
+  deploy-ssh:
+    runs-on: ubuntu-latest
+    environment: ssh
+    concurrency: ssh
+    steps:
+      - name: Prepare secrets
+        run: |
+          mkdir -d ${CONFIG}
+          echo "PASSWORD={{ .secret.db_pass }}" > properties.data 
+          echo "USER={{ .secret.db_user }}" >> properties.data
+          echo "DB_URL={{ .secret.db_url }}" >> properties.data
+          echo "DB={{ .secret.db_name }}" >> properties.data
+          
+          echo "DEPOY_TAG={{ .inputs.deploy-tag }} > compose.data
+          echo "PORT={{ .secret.app_port }} > compose.data
+          
+          echo "PASSWORD={{ .secret.db_pass }}" > postgres.data 
+          echo "USER={{ .secret.db_user }}" >> postgres.data
+          echo "DATABASE={{ .secret.db_name }}" >> postgres.data
+
+      - name: Generate templates
+        run: |
+          source properties.data && envsubst < deploy/ssh/application-ssh.tpl.properties > ${CONFIG}/application-ssh.properties 
+          source compose.data && envsubst < deploy/ssh/docker-compose.tpl.yml > ${CONFIG}/docker-compose.yml 
+          source postgres.data && envsubst < deploy/ssh/postgres.tpl.env > ${CONFIG}/postgres.env
+
+      - name: Copy files
+        run: |
+          rsync ${CONFIG} ${SSH_USER}:${SSH_SERVER}:${WORKDIR} --delete
+
+      - name: Restart docker compose
+        run: |
+          ssh -t ${SSH_USER}:${SSH_SERVER} "cd ${WORKDIR} && ${CRI} compose restart"

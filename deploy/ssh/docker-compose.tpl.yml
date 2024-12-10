@@ -1,0 +1,32 @@
+services:
+  app:
+    image: 'ghcr.io/dejfcold/be-meet-deploy-app:${DEPLOY_TAG}'
+    restart: always
+    volumes:
+      - source: application-ssh.properties
+        target: /opt/config/application.properties
+        read_only: true
+        type: bind
+    environment:
+      SPRING_CONFIG_LOCATION: /opt/config/application.properties
+    ports:
+      - "127.0.0.1:${PORT}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+
+  postgres:
+    image: 'docker.io/library/postgres:17'
+    restart: always
+    env_file:
+      - postgres.env
+    healthcheck:
+      test: "pg_isready"
+    volumes:
+      - source: postgres-data
+        target: /var/lib/postgresql/data
+        read_only: false
+        type: volume
+volumes:
+  postgres-data:
