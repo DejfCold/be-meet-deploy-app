@@ -1,5 +1,4 @@
 on:
-  deployment:
   workflow_dispatch:
     inputs:
       deploy-tag:
@@ -17,18 +16,18 @@ jobs:
     steps:
       - name: Prepare secrets
         run: |
-          mkdir -d ${CONFIG}
-          echo "PASSWORD={{ .secret.db_pass }}" > properties.data 
-          echo "USER={{ .secret.db_user }}" >> properties.data
-          echo "DB_URL={{ .secret.db_url }}" >> properties.data
-          echo "DB={{ .secret.db_name }}" >> properties.data
+          mkdir -p ${CONFIG}
+          echo "PASSWORD=${{ secrets.db_pass }}" > properties.data 
+          echo "USER=${{ secrets.db_user }}" >> properties.data
+          echo "DB_URL=${{ secrets.db_url }}" >> properties.data
+          echo "DB=${{ secrets.db_name }}" >> properties.data
           
-          echo "DEPOY_TAG={{ .inputs.deploy-tag }} > compose.data
-          echo "PORT={{ .secret.app_port }} > compose.data
+          echo "DEPOY_TAG=${{ github.event.inputs.deploy-tag }}" > compose.data
+          echo "PORT=${{ secrets.app_port }}" >> compose.data
           
-          echo "PASSWORD={{ .secret.db_pass }}" > postgres.data 
-          echo "USER={{ .secret.db_user }}" >> postgres.data
-          echo "DATABASE={{ .secret.db_name }}" >> postgres.data
+          echo "PASSWORD=${{ secrets.db_pass }}" > postgres.data 
+          echo "USER=${{ secrets.db_user }}" >> postgres.data
+          echo "DATABASE=${{ secrets.db_name }}" >> postgres.data
 
       - name: Generate templates
         run: |
@@ -38,8 +37,8 @@ jobs:
 
       - name: Copy files
         run: |
-          rsync ${CONFIG} {{ .secrets.ssh_user }}:{{ .secrets.ssh_server }}:{{ .secrets.app_location }} --delete
+          rsync -avz ${CONFIG} ${{ secrets.ssh_user }}@${{ secrets.ssh_server }}:${{ secrets.app_location }} --delete || exit 1
 
       - name: Restart docker compose
         run: |
-          ssh -t {{ .secrets.ssh_user }}:{{ .secrets.ssh_server }} "cd {{ .secrets.app_location }} && ${CRI} compose restart"
+          ssh -t ${{ secrets.ssh_user }}@${{ secrets.ssh_server }} "cd ${{ secrets.app_location }} && ${CRI} compose restart"
